@@ -2,7 +2,6 @@ package com.vsvz.connectivity;
 
 import com.vsvz.connectivity.config.IntegrationConfiguration;
 import com.vsvz.connectivity.config.MvcConfiguration;
-import com.vsvz.connectivity.webmvc.CORSFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,10 +21,6 @@ import javax.servlet.FilterRegistration;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRegistration;
-
-/**
- * Created by liusijin on 16/2/26.
- */
 
 @Configuration
 @PropertySource("classpath:message_config.properties")
