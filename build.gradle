@@ -1,0 +1,56 @@
+group 'com.vsvz'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+apply plugin: 'war'
+//apply plugin: 'jetty'
+apply from: 'https://raw.github.com/akhikhl/gretty/master/pluginScripts/gretty.plugin'
+apply plugin: 'maven'
+apply plugin: 'idea'
+
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+//    maven{ url 'http://maven.oschina.net/content/groups/public/'}
+}
+
+dependencies {
+    compile 'ch.qos.logback:logback-classic:1.1.5'
+    compile 'org.slf4j:jcl-over-slf4j:1.7.16'
+    compile 'org.slf4j:jul-to-slf4j:1.7.16'
+
+    compile 'org.springframework:spring-webmvc:4.2.5.RELEASE'
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.7.2'
+    compile 'javax.servlet:jstl:1.2'
+
+//    compile 'org.apache.activemq:activemq-broker:5.13.1'
+//    compile 'org.apache.activemq:activemq-mqtt:5.13.1'
+//    compile 'org.apache.activemq:activemq-http:5.13.1'
+
+    providedCompile 'javax.servlet:javax.servlet-api:3.0.1'
+
+    compile 'org.springframework.integration:spring-integration-core:4.2.5.RELEASE'
+    compile 'org.springframework.integration:spring-integration-mqtt:4.2.5.RELEASE'
+    compile 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.0.2'
+
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+}
+
+configurations.all {
+    exclude group: "commons-logging", module: "commons-logging"
+    exclude module: "activemq-spring"
+//    exclude module: "jetty-all"
+}
+
+//jettyRun{
+//    contextPath = ""
+//    httpPort = 8080
+//}
+//
+//jettyRunWar{
+//    contextPath = "connectivity"
+//    httpPort = 8080
+//}
