@@ -12,8 +12,30 @@ String.prototype.format = function() {
 
 (function(w){
     var MSG = {
-        typeText:"txt",typePicUrl:"pic",typeUrl:'url',
+        typeOnline:'on',typeOffLine:'off',typeAck:'ack',
+        typeText:"txt",typePicUrl:"pic_base64",typeUrl:'url',
         typeReqFirend:'req_friend',typeNewFriend:'new_friend',
+        from:null,
+        n:function(type){
+            var newMsg = {
+                header:{type:type,from:MSG.from,to:null,client:"WS",timestamp:null},
+                body:null
+            };
+
+            return {
+                body:function(content){
+                    newMsg.body=content;
+                    return this;
+                },
+                to:function(someOne){
+                    newMsg.header.to = someOne.subject;
+                    newMsg.header.timestamp = +new Date;
+                    var msg = new Paho.MQTT.Message(JSON.stringify(newMsg))
+                    msg.destinationName = someOne.subject;
+                    return msg;
+                }
+            }
+        }
     }
 
     var reconnectTimeout = 10000;
@@ -22,45 +44,64 @@ String.prototype.format = function() {
 
     var worker = {
         mqtt:null,
-        reportTo:function(handler){
+        _handler:null,
+        bind:function(handler){
             this._handler = handler
         },
-        observe:function(message){
-            if(message.type==MSG.typeText)
-                this._handler.listener.showText(message.body)//TODO BE_REGIST
-            else if(message.type==MSG.typePicUrl)
-                this._handler.listener.showPic("data:image/png;base64,"+message.body)//TODO BE_REGIST
-            else if(message.type==MSG.typeUrl)
-                this._handler.listener.showURL(message.body)//TODO BE_REGIST
-            else if(message.type==MSG.typeReqFirend){
-                stranger = new Contact(message.body);
-                this._handler.listener.comingStranger(stranger); //TODO BE_REGIST
-            } else if(message.type==MSG.typeNewFriend){
-                var newbee = new Contact(JSON.parse(message.body).body);
-                this._handler.addNewContact(newbee);
-                this._handler.listener.newFriend(newbee);//TODO BE_REGIST
+        observe:function(){
+
+            return function(message){
+
             }
+            if(message){
+                if(message.type==MSG.typeText)
+                    this._handler.listener.txt(message.body)//TODO BE_REGIST
+                else if(message.type==MSG.typePicUrl)
+                    this._handler.listener.pic(message.body)//TODO BE_REGIST
+                else if(message.type==MSG.typeUrl)
+                    this._handler.listener.url(message.body)//TODO BE_REGIST
+                else if(message.type==MSG.typeReqFirend){
+                    stranger = new Contact(message.body);
+                    this._handler.listener.comingStranger(stranger); //TODO BE_REGIST
+                } else if(message.type==MSG.typeNewFriend){
+                    var newbee = new Contact(JSON.parse(message.body).body);
+                    this._handler.addNewContact(newbee);
+                    this._handler.listener.newFriend(newbee);//TODO BE_REGIST
+                }
+                this._handler.listener.msg(message);
+            }
+
         },
-        _connect:function(serverConfig,user_id,subjects){
+
+        /**
+         * initHandler.me,initHandler.me.subject
+         * @param serverConfig
+         * @param user_id
+         * @param subjects
+         * @returns {*}
+         * @private
+         */
+        _connect:function(serverConfig,user){
             var wk = this;
             var df = $.Deferred();
+            MSG.from = user.subject;
             var MQTTconnect = function () {
                 wk.mqtt = new Paho.MQTT.Client(
                     serverConfig.channelIP,
                     parseInt(serverConfig.channelPort),
                     "/mqtt",
-                    user_id);
+                    user.id);
                 var mqttOption = {
                     timeout: 10,
                     useSSL: useTLS,
                     cleanSession: cleansession,
                     onSuccess: function(){
-                        console.log("connect succeed");
-                        wk.mqtt.subscribe(subjects,
+                        df.notify("connect succeed, wait for subscribing")
+                        wk.mqtt.subscribe(user.subject,
                             {
                                 qos: 1,
                                 onSuccess:function(){
-                                    df.resolve("connect succeed");
+                                    df.resolve("subscrib succeed");
                                 }
                             });
 
@@ -72,10 +113,11 @@ String.prototype.format = function() {
                     }
                 };
 
-                wk.mqtt.onConnectionLost = function(){
+                wk.mqtt.onConnectionLost = function(e){
+                    console.log(e);
                     setTimeout(MQTTconnect, reconnectTimeout);
                 };
-                wk.mqtt.onMessageArrived = wk.observe;
+                wk.mqtt.onMessageArrived = wk.observe();
                 wk.mqtt.startTrace();
                 var status = wk.mqtt.connect(mqttOption);
                 console.log('try connecting')
@@ -84,36 +126,33 @@ String.prototype.format = function() {
             return df.promise();
         },
         _sendText:function(dest,content){
-            var message = new Paho.MQTT.Message(JSON.stringify(content));
-            message.destinationName = dest.subject;
-            this.mqtt.send(message);
+            var m = MSG.n(MSG.typeText).body(content).to(dest);
+            this.mqtt.send(m);
         },
         _sendPicUrl:function(dest,imgURL){
             var t = this.mqtt
             convertToDataURLviaCanvas(imgURL,function(base64Img){
-                var body = {type:MSG.typePicUrl,body:base64Img}
-                var message = new Paho.MQTT.Message(JSON.stringify(body));
-                message.destinationName = dest.subject;
-                t.send(message);
+                var m = MSG.n(MSG.typePicUrl).body(base64Img).to(dest);
+                t.send(m);
             })
         },
         _sendUrl:function(dest,url){
-            var body = {type:MSG.typeUrl,body:url}
-            var message = new Paho.MQTT.Message(JSON.stringify(body));
-            message.destinationName = dest.subject;
-            this.mqtt.send(message);
+            var m = MSG.n(MSG.typeUrl).body(url).to(dest);
+            this.mqtt.send(m);
         },
-        _sendReqFirend:function(dest,toAddContact){
-            var body = {type:MSG.typeReqFirend,body:dest}
-            var message = new Paho.MQTT.Message(JSON.stringify(body));
-            message.destinationName = toAddContact.subject;
-            this.mqtt.send(message);
+        _sendReqFirend:function(requester,toAddContact){
+            var m = MSG.n(MSG.typeReqFirend).body(requester).to(toAddContact);
+            this.mqtt.send(m);
         },
-        _send:function(dest,type,object){
+        _send:function(dest,object,type){
             if(type==MSG.typePicUrl)
-                this._sendPicUrl(dest,object)
-            if(type==MSG.typeUrl)
-                this._sendUrl(dest,object)
+                this._sendPicUrl(dest,object);
+            else if(type==MSG.typeUrl)
+                this._sendUrl(dest,object);
+            else if(type==MSG.typeText)
+                this._sendText(dest,object);
+            else if(!type)
+                this._sendText(dest,object);
         }
     }
 
@@ -158,13 +197,6 @@ String.prototype.format = function() {
         beYourFriend:function(someGuy){
             worker._sendReqFirend(this,someGuy);
         },
-        talkTo:function(type,object){
-            var dest = this;
-            if(arguments.length==1)
-                worker._sendText(dest,type);
-            else
-                worker._send(dest,type,object);
-        },
         say : function(word,type){
             return {
                 to:function(dest){
@@ -177,12 +209,20 @@ String.prototype.format = function() {
     var Chatter = {};
     Chatter.MSG = MSG
     Chatter.Contact = _Contact;
-    Chatter.init = function(userID,options){
+    Chatter.init = function(userID,listener){
         var _me,_contacts,_serverConfig;
         //负责与后台API交互
         var initHandler = {
             me:null,
             contacts : null,
+            listener:{
+                onTxt:function(msg){},
+                onPic:function(msg){},
+                onUrl:function(msg){},
+                onStranger:function(msg){},
+                onNewFriend:function(msg){},
+                onMsg:function(msg){}
+            },
             findNew:function(newID,func){
                 $.getJSON("/contact/{0}".format(newID)).done(function(data){
                     func(new Chatter.Contact(data.result));
@@ -191,6 +231,13 @@ String.prototype.format = function() {
             addNewContact:function(newbee){
                 this.contacts.unshift(newbee);
             },
+
+            /**
+             * 同意加好友，从服务器申请，服务器再分发双方
+             * 服务器需要认证，可能失败
+             * @param toBeFriend
+             * @param func
+             */
             agreeFriend:function(toBeFriend,func){
                 $.getJSON("/contact/{0}/connect/{1}".format(this.me.id,toBeFriend.id))
                     .done(function(data){func(data)});
@@ -199,6 +246,11 @@ String.prototype.format = function() {
                 http_request_group_contact_list = (function(id){})(groupContact.id) //TODO need backgroud API
             }
         }
+        for(name in listener){
+            if(name.startsWith('on'))
+                initHandler.listener[name] = listener[name];
+        }
+        worker.bind(initHandler);
         var defer = $.Deferred();
         defer.promise(initHandler)
         $.when(
@@ -212,10 +264,10 @@ String.prototype.format = function() {
                 for(var one in contactList[0].result)
                     initHandler.contacts.push(new Chatter.Contact(one));
                 worker
-                    ._connect(mqttServer[0].result,initHandler.me.id,initHandler.me.subject)
-                    .progress(function(message){console.log("Connection failed: " + message + "Retrying")})
-                    .done(function(){
-                        defer.resolve("channel ready to work");
+                    ._connect(mqttServer[0].result,initHandler.me)
+                    .progress(function(message){console.log("working : " + message)})
+                    .done(function(msg){
+                        defer.resolve(msg+";channel ready to work");
                     });
 
             }
