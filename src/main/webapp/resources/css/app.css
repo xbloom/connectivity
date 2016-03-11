@@ -42,6 +42,20 @@ body, .form-control{
     margin-bottom: 10px;
 }
 
+.msg_log thead {
+    width: 97%;
+}
+.msg_log tbody {
+    height: 270px;
+    overflow-y:scroll;
+    width: 100%;
+}
+
+.msg_log thead, .msg_log tbody, .msg_log tr, .msg_log td, .msg_log th {
+    display: block;
+}
+
 .custom-width {
     width: 80px !important;
 }
+

@@ -32,14 +32,27 @@ String.prototype.format = function() {
                     newMsg.header.timestamp = +new Date;
                     var msg = new Paho.MQTT.Message(JSON.stringify(newMsg))
                     msg.destinationName = someOne.subject;
+                    msg.qos=1;
                     return msg;
                 }
             }
+        },
+        tansf:function(msg){
+            if(msg.payloadString){
+                var obj
+                try{
+                    return JSON.parse(msg.payloadString)
+                }catch(err) {
+                    console.error("msg解析JSON错误",msg.payloadString,err);
+                    return msg.payloadString;
+                }
+            }
         }
+
     }
 
     var reconnectTimeout = 10000;
-    var cleansession = true;
+    var cleansession = false;
     var useTLS = false;
 
     var worker = {
@@ -49,28 +62,29 @@ String.prototype.format = function() {
             this._handler = handler
         },
         observe:function(){
-
+            var hd = this._handler;
             return function(message){
-
-            }
-            if(message){
-                if(message.type==MSG.typeText)
-                    this._handler.listener.txt(message.body)//TODO BE_REGIST
-                else if(message.type==MSG.typePicUrl)
-                    this._handler.listener.pic(message.body)//TODO BE_REGIST
-                else if(message.type==MSG.typeUrl)
-                    this._handler.listener.url(message.body)//TODO BE_REGIST
-                else if(message.type==MSG.typeReqFirend){
-                    stranger = new Contact(message.body);
-                    this._handler.listener.comingStranger(stranger); //TODO BE_REGIST
-                } else if(message.type==MSG.typeNewFriend){
-                    var newbee = new Contact(JSON.parse(message.body).body);
-                    this._handler.addNewContact(newbee);
-                    this._handler.listener.newFriend(newbee);//TODO BE_REGIST
+                var msg =MSG.tansf(message);
+                if(msg&&msg.header){
+                    if(msg.header.type==MSG.typeText)
+                        hd.listener.onTxt(msg.body)//TODO BE_REGIST
+                    else if(msg.header.type==MSG.typePicUrl)
+                        hd.listener.onPic(msg.body)//TODO BE_REGIST
+                    else if(msg.header.type==MSG.typeUrl)
+                        hd.listener.onUrl(msg.body)//TODO BE_REGIST
+                    else if(msg.header.type==MSG.typeReqFirend){
+                        stranger = new Contact(msg.body);
+                        hd.listener.onStranger(stranger); //TODO BE_REGIST
+                    } else if(msg.header.type==MSG.typeNewFriend){
+                        var newbee = new Contact(msg.body);
+                        hd.addNewContact(newbee);
+                        hd.listener.onNewFriend(newbee);//TODO BE_REGIST
+                    }
+                    hd.listener.onMsg(msg.body);
+                }else if(msg&&typeof(msg)==='string'){
+                    hd.listener.onMsg(msg);
                 }
-                this._handler.listener.msg(message);
             }
-
         },
 
         /**
@@ -247,7 +261,7 @@ String.prototype.format = function() {
             }
         }
         for(name in listener){
-            if(name.startsWith('on'))
+            if(name&&name.substring(0,2)==='on')
                 initHandler.listener[name] = listener[name];
         }
         worker.bind(initHandler);
@@ -267,6 +281,7 @@ String.prototype.format = function() {
                     ._connect(mqttServer[0].result,initHandler.me)
                     .progress(function(message){console.log("working : " + message)})
                     .done(function(msg){
+                        console.log(msg+"\rdone");
                         defer.resolve(msg+";channel ready to work");
                     });
 

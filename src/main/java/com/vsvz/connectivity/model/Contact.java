@@ -50,7 +50,15 @@ public class Contact {
         this.subject = connectSubject;
     }
 
-    public Contact() {
-
+    @Override
+    public String toString() {
+        return "Contact{" +
+                "name='" + name + '\'' +
+                ", id='" + id + '\'' +
+                ", orgType='" + orgType + '\'' +
+                ", subject='" + subject + '\'' +
+                '}';
     }
+
+    public Contact() {}
 }

@@ -26,7 +26,7 @@
                 </thead>
                 <tbody>
                 <c:forEach items="${friends}" var="guy">
-                    <tr onclick="activeForTalking(this,${guy.id},'${guy.name}','${guy.connectSubject}')">
+                    <tr onclick="activeForTalking(this,${guy.id},'${guy.name}','${guy.subject}')">
                         <td><span>${guy.id}</span></td>
                         <td><span>${guy.name}</span></td>
                         <td><span>${guy.orgType}</span></td>
@@ -38,7 +38,7 @@
     </div>
     <div class="panel panel-default col-md-8 chat">
         <div class="panel-heading"><span class="lead" id="talking_name"></span></div>
-        <div>
+        <div >
             <div class="msg_log">
                 <table class="table table-hover">
                 </table>
@@ -67,7 +67,7 @@
 <script type="text/javascript">
     host = "${serverIp}"; // hostname or IP address
     port = ${serverPort};
-    topic = "${me.connectSubject}";  // topic to subscribe to
+    topic = "${me.subject}";  // topic to subscribe to
     useTLS = false;
     username = null;
     password = null;
@@ -80,7 +80,7 @@
                 host,
                 port,
                 "/mqtt",
-                "web_${me.name}_" + parseInt(Math.random() * 100,10));
+                "${me.id}");
         var options = {
             timeout: 3,
             useSSL: useTLS,
@@ -108,7 +108,9 @@
     function onConnect() {
         $('#status').text('已连接到 ' + host + ':' + port+':'+topic);
         // Connection succeeded; subscribe to our topic
-        mqtt.subscribe(topic, {qos: 1});
+        mqtt.subscribe(topic, {qos: 1,
+            onSuccess:function(a){
+                console.log(JSON.stringify(a))}});
     }
 
     function onConnectionLost(response) {
@@ -141,6 +143,7 @@
         if(sendContent){
             message = new Paho.MQTT.Message(sendContent);
             message.destinationName = talkingContact['active'].subject;
+            message.qos=1;
             addSendLog(message);
             mqtt.send(message);
         }
@@ -149,13 +152,13 @@
     function addSendLog(message){
         var subject = message.destinationName;
         var payload = message.payloadString;
-        $('.msg_log table').append('<tr><td><div class="send_line floatRight"><span><b>' + subject + '</b></span>你说:<br>&nbsp;&nbsp; ' + payload+'</div></td></tr>');
+        $('.msg_log table').append('<tr><td><div class="send_line floatRight"><span></span>你说:<br>&nbsp;&nbsp; ' + payload+'</div></td></tr>');
     }
 
     function addReceiveLog(message){
-        var subject = message.destinationName;
-        var payload = message.payloadString;
-        $('.msg_log table').append('<tr><td><div class="receive_line"><b>' + subject + '</b>说:<br>&nbsp;&nbsp;' + payload+'</div></td></tr>');
+        var msg = JSON.parse(message.payloadString)
+        if(msg.header)
+            $('.msg_log table').append('<tr><td><div class="receive_line"><b>' + msg.header.from + '</b>说:<br>&nbsp;&nbsp;' + JSON.stringify(msg.body)+'</div></td></tr>');
     }
 
     $(function(){

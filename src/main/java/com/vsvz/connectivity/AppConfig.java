@@ -1,5 +1,6 @@
 package com.vsvz.connectivity;
 
+import com.vsvz.connectivity.config.DataBaseConfiguration;
 import com.vsvz.connectivity.config.IntegrationConfiguration;
 import com.vsvz.connectivity.config.MvcConfiguration;
 import org.slf4j.Logger;
@@ -7,10 +8,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.web.WebApplicationInitializer;
 import org.springframework.web.context.ContextLoaderListener;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
@@ -21,10 +24,11 @@ import javax.servlet.FilterRegistration;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRegistration;
+import javax.sql.DataSource;
 
 @Configuration
 @PropertySource("classpath:message_config.properties")
-@Import({IntegrationConfiguration.class})
+@Import({IntegrationConfiguration.class, DataBaseConfiguration.class})
 public class AppConfig implements ApplicationListener, WebApplicationInitializer {
 
     private static final Logger logger = LoggerFactory.getLogger(AppConfig.class);
@@ -42,6 +46,7 @@ public class AppConfig implements ApplicationListener, WebApplicationInitializer
         // 根 context，加载必要的bean
         AnnotationConfigWebApplicationContext rootContext = getRootContext();
         container.addListener(new ContextLoaderListener(rootContext));
+
 
         // springmvc context
         AnnotationConfigWebApplicationContext dispatcherContext = new AnnotationConfigWebApplicationContext();

@@ -14,7 +14,7 @@ public interface IContactService {
 
     List<Contact> getContactListFromContact(String contactId);
 
-    Contact getContactOfUser(Long userId);
+    Contact getContactOfUser(String userId);
 
     boolean connectContact(Contact one, Contact target);
 

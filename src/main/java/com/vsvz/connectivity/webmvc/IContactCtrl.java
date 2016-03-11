@@ -21,7 +21,7 @@ public interface IContactCtrl {
      * @param userId
      * @return
      */
-    ResponseResult<Contact> contactOfUser(@PathVariable Long userId);
+    ResponseResult<Contact> contactOfUser(@PathVariable String userId);
 
     /**
      * 查询名片

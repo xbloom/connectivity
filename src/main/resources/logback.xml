@@ -12,6 +12,12 @@
     <logger name="org.springframework" level="info" additivity="false">
         <appender-ref ref="STDOUT" />
     </logger>
+    <logger name="org.springframework.integration" level="info" additivity="false">
+        <appender-ref ref="STDOUT" />
+    </logger>
+    <logger name="org.springframework.jdbc" level="info" additivity="false">
+        <appender-ref ref="STDOUT"/>
+    </logger>
 
     <logger name="com.vsvz" level="debug" additivity="false">
         <appender-ref ref="STDOUT" />

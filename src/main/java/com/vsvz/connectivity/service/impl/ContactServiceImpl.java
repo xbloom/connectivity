@@ -60,7 +60,7 @@ public class ContactServiceImpl implements IContactService {
      * @return
      */
     @Override
-    public Contact getContactOfUser(Long userId) {
+    public Contact getContactOfUser(String userId) {
         if(!StringUtils.isEmpty(userId)) {
             Contact tmp = testMap.get(userId);
             if(tmp!=null)
