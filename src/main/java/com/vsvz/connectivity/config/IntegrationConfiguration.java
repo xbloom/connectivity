@@ -109,7 +109,7 @@ public class IntegrationConfiguration {
                             obj.getHeader().getFrom(),//user id
                             obj.getHeader().getTo(),//user id
                             obj.getHeader().getType(),
-                            obj.getBody().toString(),
+                            obj.getBody()==null?null:obj.getBody().toString(),
                             obj.getHeader().getTimestamp(),//create time in client side
                             duplicated,
                             message.getPayload());//JSONMessage string format

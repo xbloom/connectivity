@@ -1,6 +1,7 @@
 package com.vsvz.connectivity.webmvc;
 
 import com.vsvz.connectivity.model.Contact;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
@@ -13,7 +14,7 @@ public interface IContactCtrl {
     /*
     * 路由至聊天页面
     * */
-    String chatRoom(@PathVariable Long userId);
+    String ui(@PathVariable String userId, Model model);
 
 
     /**

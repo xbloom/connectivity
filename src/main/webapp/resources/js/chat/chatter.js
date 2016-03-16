@@ -30,10 +30,16 @@ String.prototype.format = function() {
                 to:function(someOne){
                     newMsg.header.to = someOne.subject;
                     newMsg.header.timestamp = +new Date;
+                    return this;
+                },
+                build:function(){
                     var msg = new Paho.MQTT.Message(JSON.stringify(newMsg))
-                    msg.destinationName = someOne.subject;
+                    msg.destinationName = newMsg.header.to;
                     msg.qos=1;
                     return msg;
+                },
+                getMsg:function(){
+                    return newMsg;
                 }
             }
         },
@@ -67,20 +73,20 @@ String.prototype.format = function() {
                 var msg =MSG.tansf(message);
                 if(msg&&msg.header){
                     if(msg.header.type==MSG.typeText)
-                        hd.listener.onTxt(msg.body)//TODO BE_REGIST
+                        hd.listener.onTxt(msg,msg.body)//TODO BE_REGIST
                     else if(msg.header.type==MSG.typePicUrl)
-                        hd.listener.onPic(msg.body)//TODO BE_REGIST
+                        hd.listener.onPic(msg,msg.body)//TODO BE_REGIST
                     else if(msg.header.type==MSG.typeUrl)
-                        hd.listener.onUrl(msg.body)//TODO BE_REGIST
+                        hd.listener.onUrl(msg,msg.body)//TODO BE_REGIST
                     else if(msg.header.type==MSG.typeReqFirend){
                         stranger = new Contact(msg.body);
-                        hd.listener.onStranger(stranger); //TODO BE_REGIST
+                        hd.listener.onStranger(msg,stranger); //TODO BE_REGIST
                     } else if(msg.header.type==MSG.typeNewFriend){
                         var newbee = new Contact(msg.body);
                         hd.addNewContact(newbee);
-                        hd.listener.onNewFriend(newbee);//TODO BE_REGIST
+                        hd.listener.onNewFriend(msg,newbee);//TODO BE_REGIST
                     }
-                    hd.listener.onMsg(msg.body);
+                    hd.listener.onMsg(msg,msg.body);
                 }else if(msg&&typeof(msg)==='string'){
                     hd.listener.onMsg(msg);
                 }
@@ -95,7 +101,7 @@ String.prototype.format = function() {
          * @returns {*}
          * @private
          */
-        _connect:function(serverConfig,user){
+        _connect:function(serverConfig,user,notifyFunc){
             var wk = this;
             var df = $.Deferred();
             MSG.from = user.subject;
@@ -110,12 +116,14 @@ String.prototype.format = function() {
                     useSSL: useTLS,
                     cleanSession: cleansession,
                     onSuccess: function(){
-                        df.notify("connect succeed, wait for subscribing")
+                        df.notify("connect succeed, wait for subscribing");
+                        notifyFunc("已连接......");
                         wk.mqtt.subscribe(user.subject,
                             {
                                 qos: 1,
                                 onSuccess:function(){
                                     df.resolve("subscrib succeed");
+                                    notifyFunc("在线");
                                 }
                             });
 
@@ -123,50 +131,67 @@ String.prototype.format = function() {
                     onFailure: function (message) {
                         //TODO 重连机制，阻止发消息，状态更新等
                         df.notify( "try again later;"+message.errorMessage );
+                        notifyFunc("连接失败");
                         setTimeout(MQTTconnect, reconnectTimeout);
                     }
                 };
 
                 wk.mqtt.onConnectionLost = function(e){
                     console.log(e);
-                    setTimeout(MQTTconnect, reconnectTimeout);
+                    var seconds = reconnectTimeout/1000;
+                    var intv = setInterval(function(){
+                        if(seconds)
+                            notifyFunc("掉线了,准备"+(seconds--)+"秒后重连...")
+                        else {
+                            notifyFunc("go!!!!!!!!");
+                            MQTTconnect();
+                            clearInterval(intv);
+                        }
+                    },1000);
                 };
                 wk.mqtt.onMessageArrived = wk.observe();
                 wk.mqtt.startTrace();
                 var status = wk.mqtt.connect(mqttOption);
-                console.log('try connecting')
+                notifyFunc("启动连接...");
             }
             MQTTconnect();
             return df.promise();
         },
         _sendText:function(dest,content){
             var m = MSG.n(MSG.typeText).body(content).to(dest);
-            this.mqtt.send(m);
+            this.mqtt.send(m.build());
+            return m.getMsg();
         },
         _sendPicUrl:function(dest,imgURL){
             var t = this.mqtt
-            convertToDataURLviaCanvas(imgURL,function(base64Img){
-                var m = MSG.n(MSG.typePicUrl).body(base64Img).to(dest);
-                t.send(m);
-            })
+            var m = MSG.n(MSG.typePicUrl).body(imgURL).to(dest);
+            t.send(m.build());
+            return m.getMsg();
+            // convertToDataURLviaCanvas(imgURL,function(base64Img){
+            // })
         },
         _sendUrl:function(dest,url){
             var m = MSG.n(MSG.typeUrl).body(url).to(dest);
-            this.mqtt.send(m);
+            this.mqtt.send(m.build());
+            return m.getMsg();
         },
         _sendReqFirend:function(requester,toAddContact){
             var m = MSG.n(MSG.typeReqFirend).body(requester).to(toAddContact);
-            this.mqtt.send(m);
+            this.mqtt.send(m.build());
+            return mm.getMsg();
         },
         _send:function(dest,object,type){
+            var m;
             if(type==MSG.typePicUrl)
-                this._sendPicUrl(dest,object);
+                m=this._sendPicUrl(dest,object);
             else if(type==MSG.typeUrl)
-                this._sendUrl(dest,object);
+                m=this._sendUrl(dest,object);
             else if(type==MSG.typeText)
-                this._sendText(dest,object);
+                m=this._sendText(dest,object);
             else if(!type)
-                this._sendText(dest,object);
+                m=this._sendText(dest,object);
+
+            return m;
         }
     }
 
@@ -194,7 +219,7 @@ String.prototype.format = function() {
             var obj = jsonContact;
             if(typeof(jsonContact)=='string'){
                 try{
-                        obj = JSON.parse(jsonContact)
+                    obj = JSON.parse(jsonContact)
                 }catch(err) {
                     console.error("contact解析JSON错误",err);
                 }
@@ -214,7 +239,7 @@ String.prototype.format = function() {
         say : function(word,type){
             return {
                 to:function(dest){
-                    worker._send(dest,word,type);
+                    return worker._send(dest,word,type);
                 }
             }
         }
@@ -235,7 +260,14 @@ String.prototype.format = function() {
                 onUrl:function(msg){},
                 onStranger:function(msg){},
                 onNewFriend:function(msg){},
-                onMsg:function(msg){}
+                onMsg:function(msg){},
+                onNotifyStatus:function(info){}
+            },
+            findInContact:function(from){
+                for(id in this.contacts){
+                    if(this.contacts[id].subject==from)
+                        return this.contacts[id]
+                }
             },
             findNew:function(newID,func){
                 $.getJSON("/contact/{0}".format(newID)).done(function(data){
@@ -268,20 +300,23 @@ String.prototype.format = function() {
         var defer = $.Deferred();
         defer.promise(initHandler)
         $.when(
-            $.getJSON("/user/{0}/contact".format(userID)),
-            $.getJSON("/contact/{0}/contacts".format(userID)),
-            $.getJSON("/contact/{0}/channel".format(userID))
+            $.getJSON("http://localhost:8080/user/{0}/contact".format(userID)),
+            $.getJSON("http://localhost:8080/contact/{0}/contacts".format(userID)),
+            $.getJSON("http://localhost:8080/contact/{0}/channel".format(userID))
         ).done(
             function(contactOfUser, contactList, mqttServer){
                 initHandler.me = new Chatter.Contact(contactOfUser[0].result);
                 initHandler.contacts=[];
                 for(var one in contactList[0].result)
-                    initHandler.contacts.push(new Chatter.Contact(one));
+                    initHandler.contacts.push(new Chatter.Contact(contactList[0].result[one]));
                 worker
-                    ._connect(mqttServer[0].result,initHandler.me)
-                    .progress(function(message){console.log("working : " + message)})
+                    ._connect(mqttServer[0].result,initHandler.me,initHandler.listener.onNotifyStatus)
+                    .progress(function(message){
+                        initHandler.listener.onNotifyStatus(message)})
                     .done(function(msg){
-                        console.log(msg+"\rdone");
+                        initHandler.listener.onNotifyStatus(msg);
+                        //trick part to active mosquitto to publish offline messages immediately
+                        worker.mqtt.send(MSG.n(MSG.typeOnline).to(initHandler.me).build())
                         defer.resolve(msg+";channel ready to work");
                     });
 
@@ -289,7 +324,6 @@ String.prototype.format = function() {
         )
         return initHandler;
     }
-
 
     if(window&&!window.Chatter)
         window.Chatter=Chatter;

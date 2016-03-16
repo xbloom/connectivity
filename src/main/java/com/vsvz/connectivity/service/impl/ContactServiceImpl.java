@@ -28,7 +28,11 @@ public class ContactServiceImpl implements IContactService {
         put("10000002", new Contact("10000002","张三","B","biz/org_id/10000002"));
         put("10000003", new Contact("10000003","李四","C","cus/org_id/10000003"));
         put("10000004", new Contact("10000004","王二","C","cus/org_id/10000004"));
-        put("10000005", new Contact("10000005","隔壁老王","A","opr/org_id/10000005"));
+        put("10000005", new Contact("10000005","隔壁老王5","A","opr/org_id/10000005"));
+        put("10000006", new Contact("10000006","隔壁老王6","A","opr/org_id/10000006"));
+        put("10000007", new Contact("10000007","隔壁老王7","A","opr/org_id/10000007"));
+        put("10000008", new Contact("10000008","隔壁老王8","A","opr/org_id/10000008"));
+        put("10000009", new Contact("10000009","隔壁老王9","A","opr/org_id/10000009"));
     }};
 
 

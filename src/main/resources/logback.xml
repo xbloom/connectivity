@@ -12,6 +12,9 @@
     <logger name="org.springframework" level="info" additivity="false">
         <appender-ref ref="STDOUT" />
     </logger>
+    <logger name="org.springframework.web" level="debug" additivity="false">
+        <appender-ref ref="STDOUT"/>
+    </logger>
     <logger name="org.springframework.integration" level="info" additivity="false">
         <appender-ref ref="STDOUT" />
     </logger>

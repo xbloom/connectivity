@@ -31,29 +31,30 @@ public class ContactCtrlImpl implements IContactCtrl {
     @Autowired
     IContactService contactSrv;
 
-    /*
-    * 测试页面用
-    * */
-    @RequestMapping("index/{id}")
-    public String index(@PathVariable String id,Model model){
-        Contact me = contactSrv.getContact(id);
+    /**
+     * @param userId 用户ID
+     * @return 返回聊天页面
+     */
+    @RequestMapping("chatter/{userId}")
+    public String chatRoom(@PathVariable Long userId) {
+        return "contacts/chatter";
+    }
+
+    /**
+     * jade模板 聊天 控制器
+     * @param userId
+     * @return
+     */
+    @Override
+    @RequestMapping("ui/{userId}")
+    public String ui(@PathVariable String userId, Model model) {
+        Contact me = contactSrv.getContact(userId);
         List<Contact> myfriends = contactSrv.getContactListFromContact(me.getId());
         model.addAttribute("me",me);
         model.addAttribute("friends",myfriends);
         model.addAttribute("serverIp", env.getProperty("client_message_server_ip_websocket"));
         model.addAttribute("serverPort",env.getProperty("client_message_server_port_websocket"));
-        return "contacts/index";
-    }
-
-
-    /**
-     * @param userId 用户ID
-     * @return 返回聊天页面
-     */
-    @Override
-    @RequestMapping("chatter/{userId}")
-    public String chatRoom(@PathVariable Long userId) {
-        return "contacts/chatter";
+        return "contacts/chatterUI";
     }
 
     /**

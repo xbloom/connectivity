@@ -1,0 +1,72 @@
+doctype html
+html
+    head
+        title
+        link(rel='stylesheet', href='//cdn.bootcss.com/font-awesome/4.5.0/css/font-awesome.css')
+        link(data-dump-line-numbers="all" rel="stylesheet/less" data-poll="2000" type="text/css" href="/resources/css/styles.less")
+    body
+        div.body(ng-app="App")
+            .ui(ng-controller="contactCtrl as vm")
+                .left-menu
+                    .top
+                        .avatar
+                            img(src="http://img1.imgtn.bdimg.com/it/u=2523616208,3622853571&fm=23&gp=0.jpg")
+                        .info
+                            .name
+                                用户：{{vm.me.name}}
+                            .status
+                                {{vm.statusDesc}}
+
+                    form.search(ng-submit="vm.search()")
+                        input(placeholder="查找联系人..." type="search" ng-model="vm.queryName")
+                        i.fa.fa-search.fa-lg(type="submit")
+
+                    menu.contact-list
+                        li(ng-repeat="value in vm.contacts | filter:vm.queryName", ng-click="vm.talkTo(value.subject)")
+                            i(ng-class="{unread:value.unread}")
+                                img(src="http://img.woyaogexing.com/touxiang/katong/20140319/027118da21601721!200x200.jpg")
+                            .info
+                                .name
+                                    {{value.name}}
+                                .status
+                                    {{value.subject}}
+                .right-chat
+                    .top
+                        .avatar
+                            img(src="http://img1.imgtn.bdimg.com/it/u=2523616208,3622853571&fm=23&gp=0.jpg")
+                        .info
+                            .name(style="color:black")
+                                {{vm.target.name}}
+                            .status
+                                {{vm.target.subject}}
+                    ul.messages(ng-scroll-bottom="vm.target.messages")
+                        li(ng-repeat="msg in vm.target.messages",ng-class="{friends:!msg.mine,i:msg.mine}")
+                            .head
+                                span.name
+                                    {{msg.mine?vm.me.name:vm.target.name}}
+                                span.time
+                                    {{msg.header.timestamp | date:'yyyy-MM-dd HH:mm:ss'}}
+                                .message(ng-switch="msg.header.type")
+                                    span(ng-switch-when="pic_base64")
+                                        img(ng-src="{{msg.body}}")
+                                    span(ng-switch-default)
+                                        {{msg.body}}
+                    form.write-form(ng-keyup="$event.keyCode == 13 && vm.sendTxt() &&!true")
+                        textarea(placeholder="输入文字...",rows="2",ng-model="vm.words")
+                        input(type="file",accept="image/*",img-reader="vm.sendIMG")
+                        i.fa.fa-picture-o.fa-lg
+                        input(type="file" accept="image/*",file-reader="vm.sendFile")
+                        i.fa.fa-file-o.fa-lg
+                        span.send.fa.fa-send-o.fa-lg(ng-click="vm.sendTxt()") S
+
+
+        script(src='//cdn.bootcss.com/angular.js/1.5.0/angular.js')
+        script(src='//cdn.bootcss.com/angular-touch/1.5.0/angular-touch.js')
+        script(src='//cdn.bootcss.com/jquery/2.2.1/jquery.js')
+        script(src='//cdn.bootcss.com/less.js/2.6.0/less.js')
+        script.
+            var userID = #{me.id};
+            less.watch();
+        script(src="/resources/lib/mqttws31.js")
+        script(src="/resources/js/chat/chatter.js")
+        script(src="/resources/js/chat/chatterMV.js")
